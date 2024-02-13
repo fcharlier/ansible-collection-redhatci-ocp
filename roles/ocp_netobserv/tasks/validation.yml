@@ -71,7 +71,7 @@
   community.kubernetes.k8s_info:
     api_version: v1
     kind: StorageClass
-    name: "{{ storage_class | default(ocp_netobserv_storage_class) }}"
+    name: "{{ netobserv_storage_class | default(ocp_netobserv_storage_class) }}"
   register: sc
 
 - name: Fail when the storage class does not exit
