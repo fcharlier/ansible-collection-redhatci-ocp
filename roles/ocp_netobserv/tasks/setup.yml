@@ -1,0 +1,215 @@
+---
+- name: Create the Namespace
+  community.kubernetes.k8s:
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "netobserv"
+        labels:
+          security.openshift.io/scc.podSecurityLabelSync: "false"
+          pod-security.kubernetes.io/enforce: "baseline"
+          pod-security.kubernetes.io/enforce-version: "latest"
+
+- name: Setting Object Storage authentication
+  community.kubernetes.k8s:
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: netobserv-loki
+        namespace: "netobserv"
+      stringData:
+        access_key_id: "{{ netobserv_access_key_id | default(ocp_netobserv_access_key_id) }}"
+        access_key_secret: "{{ netobserv_access_key_secret | default(ocp_netobserv_access_key_secret) }}"
+        bucketnames: "{{ netobserv_bucket | default(ocp_netobserv_bucket) }}"
+        endpoint: "{{ netobserv_endpoint | default(ocp_netobserv_endpoint) }}"
+        region: "{{ netobserv_region | default(ocp_netobserv_region) }}"
+
+- name: Create the NetObservability Loki Stack
+  community.kubernetes.k8s:
+    definition:
+      apiVersion: loki.grafana.com/v1
+      kind: LokiStack
+      metadata:
+        name: netobserv-loki
+        namespace: "netobserv"
+      spec:
+        size: "{{ netobserv_loki_size | default(ocp_netobserv_loki_size) }}"
+        storage:
+          schemas:
+            - version: v12
+              effectiveDate: "{{ ansible_date_time.date }}"
+          secret:
+            name: netobserv-loki
+            type: s3
+        storageClassName: "{{ netobserv_storage_class | default(ocp_netobserv_storage_class) }}"
+        tenants:
+          mode: "openshift-network"
+
+- name: Configuring RBACs
+  community.kubernetes.k8s:
+    definition: |
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: netobserv-reader
+      rules:
+      - apiGroups:
+        - 'loki.grafana.com'
+        resources:
+        - network
+        resourceNames:
+        - logs
+        verbs:
+        - 'get'
+      ---
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: netobserv-writer
+      rules:
+      - apiGroups:
+        - 'loki.grafana.com'
+        resources:
+        - network
+        resourceNames:
+        - logs
+        verbs:
+        - 'create'
+      ---
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      metadata:
+        name: netobserv-writer-flp
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: netobserv-writer
+      subjects:
+      - kind: ServiceAccount
+        name: flowlogs-pipeline
+        namespace: "netobserv"
+      - kind: ServiceAccount
+        name: flowlogs-pipeline-transformer
+        namespace: "netobserv"
+
+- name: Create the Flowcollector instance
+  vars:
+    manifest: |
+      apiVersion: flows.netobserv.io/v1beta1
+      kind: FlowCollector
+      metadata:
+        name: "cluster"
+      spec:
+        namespace: "netobserv"
+        deploymentModel: DIRECT
+        agent:
+          ebpf:
+            excludeInterfaces:
+              - lo
+            imagePullPolicy: IfNotPresent
+            interfaces: []
+            logLevel: info
+            privileged: {{ netobserv_agent_privileged | default(ocp_netobserv_agent_privileged) }}
+            resources:
+              limits:
+                memory: "{{ netobserv_agent_limits_memory | default(ocp_netobserv_agent_limits_memory) }}"
+              requests:
+                cpu: "{{ netobserv_agent_cpu | default(ocp_netobserv_agent_cpu) }}"
+                memory: "{{ netobserv_agent_memory | default(ocp_netobserv_agent_memory) }}"
+            sampling: {{ netobserv_sampling | default(ocp_netobserv_sampling) }}
+          type: EBPF
+        consolePlugin:
+          autoscaler:
+            maxReplicas: {{ netobserv_console_max_replicas | default(ocp_netobserv_console_max_replicas) }}
+            metrics:
+              - resource:
+                  name: cpu
+                  target:
+                    averageUtilization: {{ netobserv_console_avg_utilization | default(ocp_netobserv_console_avg_utilization) }}
+                    type: Utilization
+                type: Resource
+            minReplicas: 1
+          enable: true
+          imagePullPolicy: IfNotPresent
+          logLevel: info
+          port: 9001
+          portNaming:
+            enable: true
+            portNames:
+              "3100": loki
+          quickFilters:
+            - default: true
+              filter:
+                dst_namespace!: openshift-,netobserv
+                src_namespace!: openshift-,netobserv
+              name: Applications
+            - filter:
+                dst_namespace: openshift-,netobserv
+                src_namespace: openshift-,netobserv
+              name: Infrastructure
+            - default: true
+              filter:
+                dst_kind: Pod
+                src_kind: Pod
+              name: Pods network
+            - filter:
+                dst_kind: Service
+              name: Services network
+          register: true
+          replicas: 1
+          resources:
+            limits:
+              memory: "{{ netobserv_console_limits_memory | default(ocp_netobserv_console_limits_memory) }}"
+            requests:
+              cpu: "{{ netobserv_console_cpu | default(ocp_netobserv_console_cpu) }}"
+              memory: "{{ netobserv_console_memory | default(ocp_netobserv_console_memory) }}"
+        loki:
+          authToken: FORWARD
+          statusUrl: "https://netobserv-loki-query-frontend-http.netobserv.svc:3100/"
+          tenantID: network
+          timeout: 10s
+          tls:
+            caCert:
+              certFile: service-ca.crt
+              name: netobserv-loki-gateway-ca-bundle
+              namespace: "netobserv"
+              type: configmap
+            enable: true
+            insecureSkipVerify: {{ netobserv_loki_tls_insecure_skip_verify | default(ocp_netobserv_loki_tls_insecure_skip_verify) }}
+            userCert:
+              namespace: "netobserv"
+          url: "https://netobserv-loki-gateway-http.netobserv.svc:8080/api/logs/v1/{{ netobserv_bucket | default(ocp_netobserv_bucket) }}"
+        processor:
+          conversationHeartbeatInterval: 30s
+          debug: {}
+          healthPort: 8080
+          imagePullPolicy: IfNotPresent
+          logLevel: info
+          logTypes: FLOWS
+          metrics:
+            disableAlerts: []
+            ignoreTags:
+              - egress
+              - packets
+              - nodes-flows
+              - namespaces-flows
+              - workloads-flows
+              - namespaces
+            server:
+              port: 9102
+              tls:
+                insecureSkipVerify: {{ netobserv_loki_tls_insecure_skip_verify | default(ocp_netobserv_loki_tls_insecure_skip_verify) }}
+                type: DISABLED
+          port: 2055
+          profilePort: 6060
+          resources:
+            limits:
+              memory: "{{ netobserv_processor_limits_memory | default(ocp_netobserv_processor_limits_memory) }}"
+            requests:
+              cpu: "{{ netobserv_processor_cpu | default(ocp_netobserv_processor_cpu) }}"
+              memory: "{{ netobserv_processor_memory | default(ocp_netobserv_processor_memory) }}"
+  community.kubernetes.k8s:
+    definition: "{{ manifest }}"
+...
