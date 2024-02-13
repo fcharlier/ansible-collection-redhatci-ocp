@@ -15,12 +15,17 @@
     name: go-builder
     image: "golang:1.19"
     debug: true
-    pids_limit: -1
+    pids_limit: "-1"
     log_level: "info"
     command: make -C /opcap build OPCAP_VERSION={{ opcap_version }}
     detach: false
     tty: true
     rm: true
+    # Increasing the memory limit from 512m to 1g
+    # to fix recurrent 137 OOM SIGKILL during the opcap build
+    memory: "1g"
+    # Required to support the resource claim when using cgroups v1
+    privileged: true
     volume:
       - "{{ opcap_dir.path }}/opcap/:/opcap:Z"
   register: opcap_build
