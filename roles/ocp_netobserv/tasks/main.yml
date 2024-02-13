@@ -1,7 +1,7 @@
 ---
 - name: Install the NetObservability stack
   when:
-    - netobserv_action | default(ocp_netobserv_action) == 'install'
+    - ocp_netobserv_action | default(docp_netobserv_action) == 'install'
   block:
     - name: Pre-run validations
       ansible.builtin.include_tasks: validation.yml
@@ -14,7 +14,7 @@
 
 - name: Cleanup NetObservability stack resources
   when:
-    - netobserv_action | default(ocp_netobserv_action) == 'cleanup'
+    - ocp_netobserv_action | default(docp_netobserv_action) == 'cleanup'
   block:
     - name: Cleanup Logging stack resources
       ansible.builtin.include_tasks: cleanup.yml
