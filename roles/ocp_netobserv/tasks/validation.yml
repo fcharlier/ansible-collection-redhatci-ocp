@@ -10,7 +10,7 @@
 - name: Fail if config file is not found
   ansible.builtin.fail:
     msg: "Config file {{ ocp_netobserv_conf_file }} not found"
-  when: 
+  when:
     - ocp_netobserv_conf_file is defined and
       ocp_netobserv_conf_file | length
     - conf_file_stat is defined
@@ -24,7 +24,7 @@
       ocp_netobserv_conf_file | length
     - conf_file_stat is defined
     - conf_file_stat.stat.exists
- 
+
 - name: Get cluster version
   community.kubernetes.k8s_info:
     api: config.openshift.io/v1

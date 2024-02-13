@@ -16,9 +16,9 @@ Main role tasks:
 
 # Role variables
 
- Variable                                  | Default                         | Required    | Description                                   
+ Variable                                  | Default                         | Required    | Description
  ----------------------------------------- | ------------------------------- | ----------- | ----------------------------------------------
-ocp_netobserv_conf_file                    |                                 | Yes         | Configuration file 
+ocp_netobserv_conf_file                    |                                 | Yes         | Configuration file
 
 
 ## Configuration Variables
