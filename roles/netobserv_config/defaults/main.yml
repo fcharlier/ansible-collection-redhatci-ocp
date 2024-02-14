@@ -1,0 +1,25 @@
+---
+dnetobserv_config_conf_file: ""
+dnetobserv_config_action: 'install'
+dnetobserv_config_sampling: 50
+dnetobserv_config_agent_privileged: true
+dnetobserv_config_agent_memory: 50Mi
+dnetobserv_config_agent_cpu: 100m
+dnetobserv_config_agent_limits_memory: 800Mi
+dnetobserv_config_processor_memory: 100Mi
+dnetobserv_config_processor_cpu: 100m
+dnetobserv_config_processor_limits_memory: 800Mi
+dnetobserv_config_console_avg_utilization: 50
+dnetobserv_config_console_max_replicas: 3
+dnetobserv_config_console_limits_memory: 100Mi
+dnetobserv_config_console_cpu: 100m
+dnetobserv_config_console_memory: 50Mi
+dnetobserv_config_loki_tls_insecure_skip_verify: true
+dnetobserv_config_access_key_id: minioadmin
+dnetobserv_config_access_key_secret: minioadmin
+dnetobserv_config_bucket: network
+dnetobserv_config_endpoint: http://minio-service.minio:9000
+dnetobserv_config_region: us-east-1
+dnetobserv_config_loki_size: 1x.extra-small
+dnetobserv_config_storage_class: managed-nfs-storage
+...

@@ -1,27 +1,27 @@
 ---
 - name: Check for config file
   ansible.builtin.stat:
-    path: "{{ ocp_netobserv_conf_file }}"
+    path: "{{ netobserv_config_conf_file }}"
   register: conf_file_stat
   when:
-    - ocp_netobserv_conf_file is defined
-    - ocp_netobserv_conf_file | length
+    - netobserv_config_conf_file is defined
+    - netobserv_config_conf_file | length
 
 - name: Fail if config file is not found
   ansible.builtin.fail:
-    msg: "Config file {{ ocp_netobserv_conf_file }} not found"
+    msg: "Config file {{ netobserv_config_conf_file }} not found"
   when:
-    - ocp_netobserv_conf_file is defined
-    - ocp_netobserv_conf_file | length
+    - netobserv_config_conf_file is defined
+    - netobserv_config_conf_file | length
     - conf_file_stat is defined
     - not conf_file_stat.stat.exists
 
 - name: Load the config file
   ansible.builtin.include_vars:
-    file: "{{ ocp_netobserv_conf_file }}"
+    file: "{{ netobserv_config_conf_file }}"
   when:
-    - ocp_netobserv_conf_file is defined
-    - ocp_netobserv_conf_file | length
+    - netobserv_config_conf_file is defined
+    - netobserv_config_conf_file | length
     - conf_file_stat is defined
     - conf_file_stat.stat.exists
 
@@ -73,7 +73,7 @@
   community.kubernetes.k8s_info:
     api_version: v1
     kind: StorageClass
-    name: "{{ ocp_netobserv_storage_class | default(docp_netobserv_storage_class) }}"
+    name: "{{ netobserv_config_storage_class | default(dnetobserv_config_storage_class) }}"
   register: sc
 
 - name: Ensure the storage class is present

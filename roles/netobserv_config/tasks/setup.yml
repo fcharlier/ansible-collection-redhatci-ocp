@@ -20,11 +20,11 @@
         name: netobserv-loki
         namespace: "netobserv"
       stringData:
-        access_key_id: "{{ ocp_netobserv_access_key_id | default(docp_netobserv_access_key_id) }}"
-        access_key_secret: "{{ ocp_netobserv_access_key_secret | default(docp_netobserv_access_key_secret) }}"
-        bucketnames: "{{ ocp_netobserv_bucket | default(docp_netobserv_bucket) }}"
-        endpoint: "{{ ocp_netobserv_endpoint | default(docp_netobserv_endpoint) }}"
-        region: "{{ ocp_netobserv_region | default(docp_netobserv_region) }}"
+        access_key_id: "{{ netobserv_config_access_key_id | default(dnetobserv_config_access_key_id) }}"
+        access_key_secret: "{{ netobserv_config_access_key_secret | default(dnetobserv_config_access_key_secret) }}"
+        bucketnames: "{{ netobserv_config_bucket | default(dnetobserv_config_bucket) }}"
+        endpoint: "{{ netobserv_config_endpoint | default(dnetobserv_config_endpoint) }}"
+        region: "{{ netobserv_config_region | default(dnetobserv_config_region) }}"
 
 - name: Create the NetObservability Loki Stack
   community.kubernetes.k8s:
@@ -35,7 +35,7 @@
         name: netobserv-loki
         namespace: "netobserv"
       spec:
-        size: "{{ ocp_netobserv_loki_size | default(docp_netobserv_loki_size) }}"
+        size: "{{ netobserv_config_loki_size | default(dnetobserv_config_loki_size) }}"
         storage:
           schemas:
             - version: v12
@@ -43,7 +43,7 @@
           secret:
             name: netobserv-loki
             type: s3
-        storageClassName: "{{ ocp_netobserv_storage_class | default(docp_netobserv_storage_class) }}"
+        storageClassName: "{{ netobserv_config_storage_class | default(dnetobserv_config_storage_class) }}"
         tenants:
           mode: "openshift-network"
 
